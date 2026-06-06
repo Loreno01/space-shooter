@@ -48,13 +48,13 @@ void setup() {
   size(1200, 800);
 
   backgroundMusic = new SoundFile(this, "space_battle.mp3");
-  backgroundMusic.amp(0.2);
+  backgroundMusic.amp(0.1);
   backgroundMusic.loop();
   
   shootSound = new SoundFile(this, "shoot.wav");
-  //explosionSound = new SoundFile(this, "explosion.wav");
+  explosionSound = new SoundFile(this, "explosion.wav");
 
-  shipImage = loadImage("naveEspacial.PNG");
+  shipImage = loadImage("spaceship.png");
 
   asteroidImages = new PImage[4];
   asteroidImages[0] = loadImage("asteroid_1.png");
@@ -183,6 +183,8 @@ void runGame() {
         bullets.remove(j);
 
         if (a.healthPoints <= 0) {
+          
+          explosionSound.play();
 
           destroyed++;
           xp += 25 * rocket.xpMultiplier * (rocket.power2xActive ? 2 : 1);
