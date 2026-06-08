@@ -105,10 +105,10 @@ class Rocket {
   /**
    * Cria um ou mais projéteis de acordo com os atributos atuais da nave
    *
-   * Caso o bônus de tiro duplo esteja ativo, projéteis adicionais serão disparados
+   * Caso o bônus de tiro duplo esteja ativo, dois projéteis serão disparados
    */
   void shoot() {
-    shootSound.play();
+    shootSound.trigger();
     
     shots++;
 

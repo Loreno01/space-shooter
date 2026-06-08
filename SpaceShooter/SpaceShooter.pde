@@ -9,12 +9,13 @@
  **===========================================================================
  */
 
-import processing.sound.*;
+import ddf.minim.*;
+Minim minim;
 
-SoundFile backgroundMusic;
-SoundFile shootSound;
-SoundFile explosionSound;
-SoundFile powerUpSound;
+AudioPlayer backgroundMusic;
+AudioSample shootSound;
+AudioSample explosionSound;
+//AudioSample powerUpSound;
 
 static final int MENU = 0;
 static final int GAME = 1;
@@ -24,6 +25,7 @@ static final int GAMEOVER = 3;
 Rocket rocket;
 
 PImage shipImage;
+PImage settingsIcon;
 PImage[] asteroidImages;
 
 ArrayList<Bullet> bullets;
@@ -32,6 +34,15 @@ ArrayList<PowerUp> powerUps;
 
 Button playButton;
 Button exitButton;
+
+boolean showSettings = false;
+
+float masterVolume = 50;
+float musicVolume = 100;
+float shootVolume = 100;
+float explosionVolume = 100;
+
+int draggingSlider = -1;
 
 int state = MENU;
 
@@ -47,14 +58,18 @@ Upgrade[] currentChoices = new Upgrade[3];
 void setup() {
   size(1200, 800);
 
-  backgroundMusic = new SoundFile(this, "space_battle.mp3");
-  backgroundMusic.amp(0.1);
+  minim = new Minim(this);
+
+  backgroundMusic = minim.loadFile("space_battle.mp3");
+  shootSound = minim.loadSample("shoot.wav");
+  explosionSound = minim.loadSample("explosion.wav");
+  //powerUpSound = minim.loadSample("powerup.wav");
+
+  backgroundMusic.setGain(-20);
   backgroundMusic.loop();
-  
-  shootSound = new SoundFile(this, "shoot.wav");
-  explosionSound = new SoundFile(this, "explosion.wav");
 
   shipImage = loadImage("spaceship.png");
+  settingsIcon = loadImage("settingsIcon.PNG");
 
   asteroidImages = new PImage[4];
   asteroidImages[0] = loadImage("asteroid_1.png");
@@ -86,6 +101,14 @@ void initGame() {
 void draw() {
   background(0);
   drawStars();
+  
+  float musicFinal = (masterVolume / 100.0) * (musicVolume / 100.0);
+  float shootFinal = (masterVolume / 100.0) * (shootVolume / 100.0);
+  float explosionFinal = (masterVolume / 100.0) * (explosionVolume / 100.0);
+
+  backgroundMusic.setGain(volumeToGain(musicFinal * 100));
+  shootSound.setGain(volumeToGain(shootFinal * 100));
+  explosionSound.setGain(volumeToGain(explosionFinal * 100));
 
   if (state == MENU) {
 
@@ -112,6 +135,16 @@ void drawMenu() {
 
   playButton.display();
   exitButton.display();
+  
+  drawSettingsButton();
+
+  if (showSettings) {
+
+    fill(0, 150);
+    noStroke();
+    rect(0, 0, width, height);
+    drawSettingsPanel();
+  }
 }
 
 void runGame() {
@@ -184,7 +217,7 @@ void runGame() {
 
         if (a.healthPoints <= 0) {
           
-          explosionSound.play();
+          explosionSound.trigger();
 
           destroyed++;
           xp += 25 * rocket.xpMultiplier * (rocket.power2xActive ? 2 : 1);
@@ -300,11 +333,102 @@ void drawGameOver() {
   textSize(18);
 
   text("Pressione R para reiniciar", width / 2, 500);
+
+  text("Pressione ESC para voltar ao menu principal", width / 2, 530);
+}
+
+void drawSettingsButton() {
+
+  boolean hovering = mouseX >= 20 && mouseX <= 70 && mouseY >= 20 && mouseY <= 70;
+
+  fill(hovering ? 90 : 60);
+  rect(20, 20, 50, 50, 8);
+  imageMode(CENTER);
+
+  float iconSize = hovering ? 40 : 36;
+  image(settingsIcon, 45, 45, iconSize, iconSize);
+}
+
+void drawSettingsPanel() {
+
+  fill(40);
+  stroke(120);
+  rect(20, 70, 260, 260, 10);
+
+  fill(255);
+  textAlign(LEFT);
+  textSize(18);
+
+  text("CONFIGURAÇÕES DE VOLUME", 35, 95);
+
+  drawSlider("Geral", masterVolume, 140);
+  drawSlider("Música", musicVolume, 190);
+  drawSlider("Tiros", shootVolume, 240);
+  drawSlider("Explosão", explosionVolume, 290);
+}
+
+void drawSlider(String label, float value, float y) {
+
+  fill(255);
+  text(label + " " + int(value), 35, y);
+  stroke(200);
+  line(35, y + 15, 235, y + 15);
+
+  float knobX = map(value, 0, 100, 35, 235);
+
+  fill(255);
+  ellipse(knobX, y + 15, 12, 12);
+}
+
+void mouseDragged() {
+
+  if (!showSettings) {
+    return;
+  }
+
+  float value = map(mouseX, 35, 235, 0, 100);
+  value = constrain(value, 0, 100);
+
+  if (mouseY > 140 && mouseY < 165) {
+    
+    masterVolume = value;
+  }
+
+  else if (mouseY > 190 && mouseY < 215) {
+
+    musicVolume = value;
+  }
+
+  else if (mouseY > 240 && mouseY < 265) {
+
+    shootVolume = value;
+  }
+
+  else if (mouseY > 290 && mouseY < 315) {
+
+    explosionVolume = value;
+  }
 }
 
 void mousePressed() {
 
   if (state == MENU) {
+    
+    if (mouseX >= 20 && mouseX <= 60 && mouseY >= 20 && mouseY <= 60) {
+
+      showSettings = !showSettings;
+      return;
+    }
+    
+    if (showSettings) {
+
+      boolean insidePanel = mouseX >= 20 && mouseX <= 280 && mouseY >= 70 && mouseY <= 330;
+
+      if (!insidePanel) {
+
+        showSettings = false;
+      }
+    }
 
     if (playButton.isClicked()) {
 
@@ -334,10 +458,20 @@ void mousePressed() {
 
 void keyPressed() {
 
-  if (state == GAMEOVER && (key == 'r' || key == 'R')) {
+  if (state == GAMEOVER) {
 
-    initGame();
-    state = GAME;
+    if (key == 'r' || key == 'R') {
+
+      initGame();
+      state = GAME;
+    }
+
+    if (keyCode == ESC) {
+
+      key = 0;
+      initGame();
+      state = MENU;
+    }
   }
 }
 
@@ -349,4 +483,24 @@ void drawStars() {
 
     point((i * 91) % width, (frameCount + i * 33) % height);
   }
+}
+
+void stop() {
+
+  backgroundMusic.close();
+  shootSound.close();
+  explosionSound.close();
+  //powerUpSound.close();
+
+  minim.stop();
+  super.stop();
+}
+
+float volumeToGain(float volume) {
+
+  if (volume <= 0) {
+    return -80;
+  }
+
+  return map(volume, 0, 100, -40, 0);
 }
