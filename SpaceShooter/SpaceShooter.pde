@@ -9,31 +9,22 @@
  **===========================================================================
  */
 
+// Imports
 import ddf.minim.*;
+
+// Constantes
+static final int MENU = 0;
+static final int GAME = 1;
+static final int LEVELUP = 2;
+static final int GAMEOVER = 3;
+static final int STARS = 120;
+
+// Áudio
 Minim minim;
 
 AudioPlayer backgroundMusic;
 AudioSample shootSound;
 AudioSample explosionSound;
-//AudioSample powerUpSound;
-
-static final int MENU = 0;
-static final int GAME = 1;
-static final int LEVELUP = 2;
-static final int GAMEOVER = 3;
-
-Rocket rocket;
-
-PImage shipImage;
-PImage settingsIcon;
-PImage[] asteroidImages;
-
-ArrayList<Bullet> bullets;
-ArrayList<Asteroid> asteroids;
-ArrayList<PowerUp> powerUps;
-
-Button playButton;
-Button exitButton;
 
 boolean showSettings = false;
 
@@ -44,6 +35,22 @@ float explosionVolume = 100;
 
 int draggingSlider = -1;
 
+// Recursos gráficos
+PImage settingsIcon;
+PImage shipImage;
+PImage[] asteroidImages;
+
+// Entidades do jogo
+Rocket rocket;
+ArrayList<Bullet> bullets;
+ArrayList<Asteroid> asteroids;
+ArrayList<PowerUp> powerUps;
+
+// Interface
+Button playButton;
+Button exitButton;
+
+// Progressão
 int state = MENU;
 
 int destroyed = 0;
@@ -58,33 +65,52 @@ Upgrade[] currentChoices = new Upgrade[3];
 void setup() {
   size(1200, 800);
 
+  initializeAudio();
+  initializeGraphics();
+  initializeUI();
+  initializeGame();
+}
+
+/**
+ * Inicializa o sistema de áudio do jogo
+ */
+void initializeAudio() {
   minim = new Minim(this);
 
   backgroundMusic = minim.loadFile("space_battle.mp3");
   shootSound = minim.loadSample("shoot.wav");
   explosionSound = minim.loadSample("explosion.wav");
-  //powerUpSound = minim.loadSample("powerup.wav");
 
   backgroundMusic.setGain(-20);
   backgroundMusic.loop();
+}
 
+/**
+ * Inicializa todas as imagens utilizadas pelo jogo
+ */
+void initializeGraphics() {
+  settingsIcon = loadImage("settings_icon.png");
   shipImage = loadImage("spaceship.png");
-  settingsIcon = loadImage("settingsIcon.PNG");
 
   asteroidImages = new PImage[4];
   asteroidImages[0] = loadImage("asteroid_1.png");
   asteroidImages[1] = loadImage("asteroid_2.png");
   asteroidImages[2] = loadImage("asteroid_3.png");
   asteroidImages[3] = loadImage("asteroid_4.png");
+}
 
-  initGame();
-
+/**
+ * Inicializa os componentes da interface
+ */
+void initializeUI() {
   playButton = new Button(width / 2 - 100, 300, 200, 60, "JOGAR");
   exitButton = new Button(width / 2 - 100, 390, 200, 60, "SAIR");
 }
 
-void initGame() {
-
+/**
+ * Inicializa todos os dados da partida
+ */
+void initializeGame() {
   rocket = new Rocket();
   bullets = new ArrayList<Bullet>();
   asteroids = new ArrayList<Asteroid>();
@@ -99,34 +125,51 @@ void initGame() {
 }
 
 void draw() {
-  background(0);
   drawStars();
-  
-  float musicFinal = (masterVolume / 100.0) * (musicVolume / 100.0);
-  float shootFinal = (masterVolume / 100.0) * (shootVolume / 100.0);
-  float explosionFinal = (masterVolume / 100.0) * (explosionVolume / 100.0);
 
-  backgroundMusic.setGain(volumeToGain(musicFinal * 100));
-  shootSound.setGain(volumeToGain(shootFinal * 100));
-  explosionSound.setGain(volumeToGain(explosionFinal * 100));
+  backgroundMusic.setGain(volumeToGain(musicVolume));
+  shootSound.setGain(volumeToGain(shootVolume));
+  explosionSound.setGain(volumeToGain(explosionVolume));
 
-  if (state == MENU) {
-
+  switch(state) {
+  case MENU:
     drawMenu();
-  } else if (state == GAME) {
-
+    break;
+  case GAME:
     runGame();
-  } else if (state == LEVELUP) {
-
+    break;
+  case LEVELUP:
     drawLevelUp();
-  } else if (state == GAMEOVER) {
-
+    break;
+  case GAMEOVER:
     drawGameOver();
+    break;
   }
 }
 
-void drawMenu() {
+void drawStars() {
+  background(0);
+  stroke(255);
 
+  for (int star = 0; star < STARS; star++) {
+    point((star * 91) % width, (frameCount + star * 33) % height);
+  }
+}
+
+float volumeToGain(float volume) {
+  float volumeFinal = ((masterVolume / 100.0) * (volume / 100.0)) * 100;
+
+  if (volumeFinal <= 0) {
+    return -80;
+  }
+
+  return map(volumeFinal, 0, 100, -40, 0);
+}
+
+/**
+ * Exibe a tela inicial do jogo
+ */
+void drawMenu() {
   fill(255);
   textAlign(CENTER);
   textSize(48);
@@ -135,11 +178,10 @@ void drawMenu() {
 
   playButton.display();
   exitButton.display();
-  
+
   drawSettingsButton();
 
   if (showSettings) {
-
     fill(0, 150);
     noStroke();
     rect(0, 0, width, height);
@@ -148,14 +190,11 @@ void drawMenu() {
 }
 
 void runGame() {
-
   if (frameCount % max(15, 60 - level * 2) == 0) {
-
     asteroids.add(new Asteroid(level));
   }
 
   if (frameCount % 1200 == 0 && powerUps.size() == 0 && random(1) < 0.20) {
-
     powerUps.add(new PowerUp());
   }
 
@@ -164,11 +203,9 @@ void runGame() {
   rocket.tryShoot();
 
   for (int i = powerUps.size() - 1; i >= 0; i--) {
-
     PowerUp p = powerUps.get(i);
 
     if (p.isExpired()) {
-
       powerUps.remove(i);
       continue;
     }
@@ -176,7 +213,6 @@ void runGame() {
     p.display();
 
     if (p.isCollected(rocket)) {
-
       rocket.activatePower2x();
       powerUps.remove(i);
     }
@@ -190,7 +226,6 @@ void runGame() {
     b.display();
 
     if (b.isOffScreen()) {
-
       bullets.remove(i);
     }
   }
@@ -216,7 +251,7 @@ void runGame() {
         bullets.remove(j);
 
         if (a.healthPoints <= 0) {
-          
+
           explosionSound.trigger();
 
           destroyed++;
@@ -241,6 +276,13 @@ void runGame() {
     state = LEVELUP;
   }
 
+  drawHUD();
+}
+
+/**
+ * Desenha as informações da partida na tela
+ */
+void drawHUD() {
   fill(255);
   textAlign(LEFT);
   textSize(18);
@@ -254,17 +296,13 @@ void runGame() {
 
   fill(255);
   textSize(16);
-
   text("Dano por tiro: " + rocket.damage, 20, 90);
-
   text("Cadência da arma: " + rocket.shootIntervalFrames, 20, 115);
-
   text("Velocidade da nave: " + nf(rocket.movementSpeed, 0, 1), 20, 140);
-
   text("Quantidade de projéteis: " + rocket.projectileCount, 20, 165);
-
   text("XP Bônus: " + int((rocket.xpMultiplier - 1) * 100) + "%", 20, 190);
 }
+
 
 void generateChoices() {
 
@@ -275,23 +313,21 @@ void generateChoices() {
   }
 
   pool.add(new Upgrade("DANO AUMENTADO", "+1 dano por tiro"));
-
   pool.add(new Upgrade("CADÊNCIA DA ARMA", "+15% velocidade de disparo"));
-
   pool.add(new Upgrade("VELOCIDADE DA NAVE", "+20% velocidade da nave"));
-
   pool.add(new Upgrade("XP BÔNUS", "+10% XP obtido"));
 
   for (int i = 0; i < 3; i++) {
-
     int index = int(random(pool.size()));
     currentChoices[i] = pool.get(index);
     pool.remove(index);
   }
 }
 
+/**
+ * Exibe a tela de seleção de melhorias
+ */
 void drawLevelUp() {
-
   fill(255);
   textAlign(CENTER);
   textSize(32);
@@ -315,7 +351,6 @@ void drawLevelUp() {
 }
 
 void drawGameOver() {
-
   fill(255, 0, 0);
   textAlign(CENTER);
   textSize(48);
@@ -325,15 +360,12 @@ void drawGameOver() {
   textSize(24);
 
   text("Nível alcançado: " + level, width / 2, 250);
-
   text("Asteroides destruídos: " + destroyed, width / 2, 290);
-
   text("Disparos efetuados: " + shots, width / 2, 330);
 
   textSize(18);
 
   text("Pressione R para reiniciar", width / 2, 500);
-
   text("Pressione ESC para voltar ao menu principal", width / 2, 530);
 }
 
@@ -390,21 +422,15 @@ void mouseDragged() {
   value = constrain(value, 0, 100);
 
   if (mouseY > 140 && mouseY < 165) {
-    
-    masterVolume = value;
-  }
 
-  else if (mouseY > 190 && mouseY < 215) {
+    masterVolume = value;
+  } else if (mouseY > 190 && mouseY < 215) {
 
     musicVolume = value;
-  }
-
-  else if (mouseY > 240 && mouseY < 265) {
+  } else if (mouseY > 240 && mouseY < 265) {
 
     shootVolume = value;
-  }
-
-  else if (mouseY > 290 && mouseY < 315) {
+  } else if (mouseY > 290 && mouseY < 315) {
 
     explosionVolume = value;
   }
@@ -413,13 +439,13 @@ void mouseDragged() {
 void mousePressed() {
 
   if (state == MENU) {
-    
+
     if (mouseX >= 20 && mouseX <= 60 && mouseY >= 20 && mouseY <= 60) {
 
       showSettings = !showSettings;
       return;
     }
-    
+
     if (showSettings) {
 
       boolean insidePanel = mouseX >= 20 && mouseX <= 280 && mouseY >= 70 && mouseY <= 330;
@@ -432,7 +458,7 @@ void mousePressed() {
 
     if (playButton.isClicked()) {
 
-      initGame();
+      initializeGame();
       state = GAME;
     }
 
@@ -462,45 +488,25 @@ void keyPressed() {
 
     if (key == 'r' || key == 'R') {
 
-      initGame();
+      initializeGame();
       state = GAME;
     }
 
     if (keyCode == ESC) {
 
       key = 0;
-      initGame();
+      initializeGame();
       state = MENU;
     }
   }
 }
 
-void drawStars() {
-
-  stroke(255);
-
-  for (int i = 0; i < 120; i++) {
-
-    point((i * 91) % width, (frameCount + i * 33) % height);
-  }
-}
-
 void stop() {
-
   backgroundMusic.close();
   shootSound.close();
   explosionSound.close();
-  //powerUpSound.close();
 
   minim.stop();
+
   super.stop();
-}
-
-float volumeToGain(float volume) {
-
-  if (volume <= 0) {
-    return -80;
-  }
-
-  return map(volume, 0, 100, -40, 0);
 }
