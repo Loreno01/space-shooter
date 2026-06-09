@@ -18,6 +18,9 @@ static final int GAME = 1;
 static final int LEVELUP = 2;
 static final int GAMEOVER = 3;
 static final int STARS = 120;
+static final int MAX_VOLUME = 100;
+static final int SETTINGS_WIDTH = 250;
+static final int SETTINGS_HEIGHT = 260;
 
 // Áudio
 Minim minim;
@@ -28,10 +31,10 @@ AudioSample explosionSound;
 
 boolean showSettings = false;
 
-float masterVolume = 50;
-float musicVolume = 100;
-float shootVolume = 100;
-float explosionVolume = 100;
+float masterVolume = MAX_VOLUME / 2;
+float musicVolume = MAX_VOLUME;
+float shootVolume = MAX_VOLUME;
+float explosionVolume = MAX_VOLUME;
 
 int draggingSlider = -1;
 
@@ -81,7 +84,7 @@ void initializeAudio() {
   shootSound = minim.loadSample("shoot.wav");
   explosionSound = minim.loadSample("explosion.wav");
 
-  backgroundMusic.setGain(-20);
+  backgroundMusic.setGain(volumeToGain(musicVolume));
   backgroundMusic.loop();
 }
 
@@ -147,6 +150,9 @@ void draw() {
   }
 }
 
+/**
+ * Desenha o céu estrelado como plano de fundo
+ */
 void drawStars() {
   background(0);
   stroke(255);
@@ -156,6 +162,12 @@ void drawStars() {
   }
 }
 
+/**
+ * Converte um valor percentual de volume para ganho em decibéis utilizado pelo Minim
+ *
+ * @param volume valor entre 0 e 100
+ * @return ganho em dB
+ */
 float volumeToGain(float volume) {
   float volumeFinal = ((masterVolume / 100.0) * (volume / 100.0)) * 100;
 
@@ -187,16 +199,57 @@ void drawMenu() {
     rect(0, 0, width, height);
     drawSettingsPanel();
   }
+
+  fill(120);
+  textAlign(RIGHT, BOTTOM);
+  textSize(16);
+  text("Desenvolvido por Eduardo Lorscheiter e Loreno Enrique Ribeiro", width - 15, height - 10);
+}
+
+void drawSettingsButton() {
+  boolean hovering = mouseX >= 20 && mouseX <= 70 && mouseY >= 20 && mouseY <= 70;
+
+  fill(hovering ? 90 : 60);
+  rect(20, 20, 50, 50, 8);
+  imageMode(CENTER);
+
+  float iconSize = hovering ? 40 : 36;
+  image(settingsIcon, 45, 45, iconSize, iconSize);
+}
+
+void drawSettingsPanel() {
+  fill(40);
+  stroke(120);
+  rect(20, 70, SETTINGS_WIDTH, SETTINGS_HEIGHT, 10);
+
+  fill(255);
+  textAlign(LEFT);
+  textSize(18);
+
+  text("CONFIGURAÇÕES DE VOLUME", 35, 95);
+
+  drawSlider("Geral", masterVolume, 140);
+  drawSlider("Música", musicVolume, 190);
+  drawSlider("Tiros", shootVolume, 240);
+  drawSlider("Explosão", explosionVolume, 290);
+}
+
+void drawSlider(String label, float value, float y) {
+
+  fill(255);
+  text(label + " " + int(value), 35, y);
+  stroke(200);
+  line(35, y + 15, 235, y + 15);
+
+  float knobX = map(value, 0, 100, 35, 235);
+
+  fill(255);
+  ellipse(knobX, y + 15, 12, 12);
 }
 
 void runGame() {
-  if (frameCount % max(15, 60 - level * 2) == 0) {
-    asteroids.add(new Asteroid(level));
-  }
-
-  if (frameCount % 1200 == 0 && powerUps.size() == 0 && random(1) < 0.20) {
-    powerUps.add(new PowerUp());
-  }
+  spawnAsteroids();
+  spawnPowerUps();
 
   rocket.update();
   rocket.display();
@@ -264,19 +317,26 @@ void runGame() {
   }
 
   if (xp >= xpNext) {
-
     xp -= xpNext;
-
     level++;
-
     xpNext *= 1.4;
-
     generateChoices();
-
     state = LEVELUP;
   }
 
   drawHUD();
+}
+
+void spawnAsteroids() {
+  if (frameCount % max(15, 60 - level * 2) == 0) {
+    asteroids.add(new Asteroid(level));
+  }
+}
+
+void spawnPowerUps() {
+  if (frameCount % 1200 == 0 && powerUps.size() == 0 && random(1) < 0.20) {
+    powerUps.add(new PowerUp());
+  }
 }
 
 /**
@@ -288,6 +348,8 @@ void drawHUD() {
   textSize(18);
   text("Nível: " + level, 20, 30);
 
+  stroke(255);
+  
   fill(60);
   rect(20, 45, 200, 15);
 
@@ -303,9 +365,7 @@ void drawHUD() {
   text("XP Bônus: " + int((rocket.xpMultiplier - 1) * 100) + "%", 20, 190);
 }
 
-
 void generateChoices() {
-
   ArrayList<Upgrade> pool = new ArrayList<Upgrade>();
 
   if (rocket.projectileCount < 2 && random(1) < 0.30) {
@@ -369,51 +429,7 @@ void drawGameOver() {
   text("Pressione ESC para voltar ao menu principal", width / 2, 530);
 }
 
-void drawSettingsButton() {
-
-  boolean hovering = mouseX >= 20 && mouseX <= 70 && mouseY >= 20 && mouseY <= 70;
-
-  fill(hovering ? 90 : 60);
-  rect(20, 20, 50, 50, 8);
-  imageMode(CENTER);
-
-  float iconSize = hovering ? 40 : 36;
-  image(settingsIcon, 45, 45, iconSize, iconSize);
-}
-
-void drawSettingsPanel() {
-
-  fill(40);
-  stroke(120);
-  rect(20, 70, 260, 260, 10);
-
-  fill(255);
-  textAlign(LEFT);
-  textSize(18);
-
-  text("CONFIGURAÇÕES DE VOLUME", 35, 95);
-
-  drawSlider("Geral", masterVolume, 140);
-  drawSlider("Música", musicVolume, 190);
-  drawSlider("Tiros", shootVolume, 240);
-  drawSlider("Explosão", explosionVolume, 290);
-}
-
-void drawSlider(String label, float value, float y) {
-
-  fill(255);
-  text(label + " " + int(value), 35, y);
-  stroke(200);
-  line(35, y + 15, 235, y + 15);
-
-  float knobX = map(value, 0, 100, 35, 235);
-
-  fill(255);
-  ellipse(knobX, y + 15, 12, 12);
-}
-
 void mouseDragged() {
-
   if (!showSettings) {
     return;
   }
@@ -422,58 +438,44 @@ void mouseDragged() {
   value = constrain(value, 0, 100);
 
   if (mouseY > 140 && mouseY < 165) {
-
     masterVolume = value;
   } else if (mouseY > 190 && mouseY < 215) {
-
     musicVolume = value;
   } else if (mouseY > 240 && mouseY < 265) {
-
     shootVolume = value;
   } else if (mouseY > 290 && mouseY < 315) {
-
     explosionVolume = value;
   }
 }
 
 void mousePressed() {
-
   if (state == MENU) {
-
-    if (mouseX >= 20 && mouseX <= 60 && mouseY >= 20 && mouseY <= 60) {
-
+    if (mouseX >= 20 && mouseX <= 70 && mouseY >= 20 && mouseY <= 70) {
       showSettings = !showSettings;
       return;
     }
 
     if (showSettings) {
-
       boolean insidePanel = mouseX >= 20 && mouseX <= 280 && mouseY >= 70 && mouseY <= 330;
 
       if (!insidePanel) {
-
         showSettings = false;
       }
     }
 
     if (playButton.isClicked()) {
-
       initializeGame();
       state = GAME;
     }
 
     if (exitButton.isClicked()) {
-
       exit();
     }
   } else if (state == LEVELUP) {
-
     for (int i = 0; i < 3; i++) {
-
       float x = 180 + i * 280;
 
       if (mouseX > x && mouseX < x + 240 && mouseY > 280 && mouseY < 420) {
-
         currentChoices[i].apply(rocket);
         rocket.invulnerabilityEndFrame = frameCount + 180;
         state = GAME;
@@ -483,17 +485,13 @@ void mousePressed() {
 }
 
 void keyPressed() {
-
   if (state == GAMEOVER) {
-
     if (key == 'r' || key == 'R') {
-
       initializeGame();
       state = GAME;
     }
 
     if (keyCode == ESC) {
-
       key = 0;
       initializeGame();
       state = MENU;
