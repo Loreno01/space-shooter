@@ -65,7 +65,7 @@ SpaceShooter/
     ├── asteroid_2.png
     ├── asteroid_3.png
     ├── asteroid_4.png
-    ├── settingsIcon.png
+    ├── settings_icon.png
     ├── space_battle.mp3
     ├── shoot.wav
     └── explosion.wav
