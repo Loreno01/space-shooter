@@ -373,7 +373,7 @@ void generateChoices() {
   }
 
   pool.add(new Upgrade("DANO AUMENTADO", "+1 dano por tiro"));
-  pool.add(new Upgrade("CADÊNCIA DA ARMA", "+15% velocidade de disparo"));
+  pool.add(new Upgrade("CADÊNCIA DA ARMA", "+10% cadência dos disparos"));
   pool.add(new Upgrade("VELOCIDADE DA NAVE", "+20% velocidade da nave"));
   pool.add(new Upgrade("XP BÔNUS", "+10% XP obtido"));
 
